@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Birthday</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+margin:0;
+width:100%;
+min-height:100%;
+}
+
+body{
+background:#f7e9e8 url("flowers.jpeg") repeat;
+background-size:360px auto;
+background-position:center top;
+overflow-x:hidden;
+}
+
+/* COVER */
+
+#cover{
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+padding:15px;
+}
+
+#cover img{
+max-width:94vw;
+max-height:94vh;
+width:auto;
+height:auto;
+object-fit:contain;
+}
+
+
+/* BOOKLET */
+
+#book{
+display:none;
+min-height:100vh;
+align-items:center;
+justify-content:center;
+gap:0px;
+padding:0;
+}
+
+.page{
+position:relative;
+width:min(45vw,510px);
+height:95vh;
+margin:0;
+}
+
+.page>img{
+display:block;
+width:100%;
+height:100%;
+object-fit:contain;
+}
+
+
+/* LETTER */
+
+#letterPopup{
+display:none;
+position:fixed;
+inset:0;
+z-index:1000;
+background:#f7e9e8;
+align-items:center;
+justify-content:center;
+padding:15px;
+cursor:pointer;
+}
+
+#letterPopup img{
+max-width:94vw;
+max-height:94vh;
+width:auto;
+height:auto;
+object-fit:contain;
+}
+
+
+/* CAKE */
+
+#cakePage{
+position:relative;
+cursor:pointer;
+}
+
+
+/* FLAMES */
+
+.flame{
+position:absolute;
+width:20px;
+height:30px;
+z-index:10;
+pointer-events:none;
+
+background:radial-gradient(
+ellipse at center bottom,
+#fffbd0,
+#ffd43b 40%,
+#ff9800 70%,
+#ff5b00
+);
+
+border-radius:50%;
+transform:rotate(45deg);
+
+box-shadow:
+0 0 8px #ffb000,
+0 0 15px #ff8c00;
+
+animation:flicker .15s infinite alternate;
+}
+
+@keyframes flicker{
+from{transform:rotate(45deg) scale(1)}
+to{transform:rotate(42deg) scale(1.08)}
+}
+
+/* ADJUST THESE LATER */
+
+#flame1{left:29%;top:46%}
+#flame2{left:49.5%;top:42%}
+#flame3{left:70%;top:44%}
+
+
+/* WISH TEXT */
+
+#wish{
+display:none;
+position:absolute;
+bottom:15px;
+left:50%;
+transform:translateX(-50%);
+font-size:14px;
+color:#8a5b4c;
+font-weight:600;
+z-index:20;
+white-space:nowrap;
+}
+
+#final{
+display:none;
+height:100vh;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+padding:15px;
+}
+
+#final img{
+max-width:94vw;
+max-height:94vh;
+width:auto;
+height:auto;
+object-fit:contain;
+}
+
+
+/* MOBILE */
+
+@media(max-width:750px){
+
+#book{
+flex-direction:column;
+}
+
+.page{
+width:92vw;
+}
+
+}
+</style>
+</head>
+
+<body>
+
+<!-- COVER -->
+
+<div id="cover">
+<img src="cover.png">
+</div>
+
+
+<!-- BOOKLET -->
+
+<div id="book">
+
+<div class="page" id="envelopePage">
+
+<img src="envelope.png">
+
+</div>
+
+
+<div class="page" id="cakePage">
+
+<img src="cake.png">
+
+<div class="flame" id="flame1"></div>
+<div class="flame" id="flame2"></div>
+<div class="flame" id="flame3"></div>
+
+<div id="wish"></div>
+
+</div>
+
+</div>
+
+
+<!-- LETTER -->
+
+<div id="letterPopup">
+
+<img src="letter.png">
+
+</div>
+
+<audio id="birthdaysong" preload="auto">
+    <source src="birthday-song.mp3" type ="audio/mpeg">
+</audio>
+
+<!-- FINAL -->
+
+<div id="final">
+
+<img src="final.jpeg">
+
+</div>
+
+
+<script>
+
+    const cover = document.getElementById("cover");
+const book = document.getElementById("book");
+
+const envelopePage =
+    document.getElementById("envelopePage");
+
+const letterPopup =
+    document.getElementById("letterPopup");
+
+const cakePage =
+    document.getElementById("cakePage");
+
+const wish =
+    document.getElementById("wish");
+
+const finalPage =
+    document.getElementById("final");
+
+
+/* =========================
+   COVER → BOOKLET
+========================= */
+
+cover.onclick = function(){
+
+    cover.style.display = "none";
+    book.style.display = "flex";
+
+};
+
+cover.onclick = function(){
+
+    const song = document.getElementById("birthdaysong");
+    song.currentTime = 0;
+    song.play().then(function(){
+
+    cover.style.display = "none";
+    book.style.display = "flex";
+}).catch(function(error){
+    console.log("Audio could not start:", error);
+
+        // Still open booklet if audio fails
+        cover.style.display = "none";
+        book.style.display = "flex";
+
+    });
+
+};
+
+
+
+
+/* =========================
+   ENVELOPE → LETTER
+========================= */
+
+envelopePage.onclick = function(){
+
+    letterPopup.style.display = "flex";
+
+};
+
+
+/* =========================
+   LETTER → BACK
+========================= */
+
+letterPopup.onclick = function(){
+
+    letterPopup.style.display = "none";
+
+};
+
+
+/* =========================
+   MICROPHONE
+========================= */
+
+let audioContext;
+let analyser;
+let stream;
+let listening = false;
+let candlesOut = false;
+
+async function startMicrophone(){
+
+    if(listening || candlesOut){
+        return;
+    }
+
+    try{
+
+        stream =
+            await navigator.mediaDevices
+            .getUserMedia({
+                audio:true
+            });
+
+        audioContext =
+            new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+
+        analyser =
+            audioContext.createAnalyser();
+
+        analyser.fftSize = 1024;
+
+        const source =
+            audioContext
+            .createMediaStreamSource(stream);
+
+        source.connect(analyser);
+
+        listening = true;
+
+        wish.textContent = "✨ Make a Wish ✨";
+        wish.style.display = "block";
+
+        detectBlow();
+
+    }
+    catch(error){
+
+        alert(
+            "Please allow microphone access."
+        );
+
+    }
+
+}
+
+
+/* =========================
+   CLICK CAKE → MICROPHONE
+========================= */
+
+cakePage.onclick = function(){
+
+    if(candlesOut){
+        return;
+    }
+
+    startMicrophone();
+
+};
+
+
+/* =========================
+   BLOW DETECTION
+========================= */
+
+function detectBlow(){
+
+    if(!listening || candlesOut){
+        return;
+    }
+
+    const data =
+        new Uint8Array(
+            analyser.fftSize
+        );
+
+    analyser.getByteTimeDomainData(data);
+
+    let sum = 0;
+
+    for(let i=0;i<data.length;i++){
+
+        const value =
+            (data[i]-128)/128;
+
+        sum += value * value;
+
+    }
+
+    const volume =
+        Math.sqrt(
+            sum / data.length
+        );
+
+
+    /*
+       Sensitive setting.
+       A normal blow should work.
+    */
+
+    if(volume > 0.012){
+
+        blowCandles();
+
+        return;
+
+    }
+
+    requestAnimationFrame(
+        detectBlow
+    );
+
+}
+
+
+/* =========================
+   BLOW CANDLES
+========================= */
+
+function blowCandles(){
+
+    candlesOut = true;
+    listening = false;
+
+
+    /* Stop microphone */
+
+    if(stream){
+
+        stream
+        .getTracks()
+        .forEach(function(track){
+
+            track.stop();
+
+        });
+
+    }
+
+
+    if(audioContext){
+
+        audioContext.close();
+
+    }
+
+
+    /* Flames OFF */
+
+    document
+    .querySelectorAll(".flame")
+    .forEach(function(flame){
+
+        flame.style.display = "none";
+
+    });
+
+
+    /* Wish Made */
+
+    wish.textContent = "✨ Wish Made ✨";
+    wish.style.display = "block";
+
+
+    /*
+       Give the user a moment
+       to see Wish Made.
+    */
+
+    setTimeout(function(){
+
+        book.style.display = "none";
+
+        finalPage.style.display = "flex";
+
+    },3500);
+
+}
+
+
+/* =========================
+   FINAL → COVER
+========================= */
+
+finalPage.onclick = function(){
+
+    finalPage.style.display = "none";
+
+    book.style.display = "none";
+
+    cover.style.display = "flex";
+
+
+    /* Reset */
+
+    candlesOut = false;
+    listening = false;
+
+    wish.style.display = "none";
+
+
+    document
+    .querySelectorAll(".flame")
+    .forEach(function(flame){
+
+        flame.style.display = "block";
+
+    });
+
+};
+
+</script>
+</body>
+</html>
